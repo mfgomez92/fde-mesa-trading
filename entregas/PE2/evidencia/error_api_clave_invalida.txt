@@ -1,0 +1,109 @@
+$ python -m src.motor     # con BOT_ANTHROPIC_API_KEY inválida, a propósito
+Velas: Alpaca, feed IEX, descargadas el 2026-10-29T05:29:08+00:00
+Proveedores en orden: anthropic/claude-haiku-5-5
+
+=== Consulta 1/5: Se cruzaron las EMAs en la última vela. ¿Hay entrada?
+2026-10-29 02:33:44,719 INFO httpx2: HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 401 Unauthorized"
+2026-10-29 02:33:44,720 WARNING motor: Falló anthropic (autenticacion): Clave inválida o ausente (401)
+2026-10-29 02:33:44,721 ERROR motor: Error estructurado: {"tipo":"error_api","mensaje":"anthropic/autenticacion: Clave inválida o ausente (401)","campos":[]}
+{
+  "ok": false,
+  "id_propuesta": "PRP-20261028-0001",
+  "error": {
+    "tipo": "error_api",
+    "mensaje": "anthropic/autenticacion: Clave inválida o ausente (401)",
+    "campos": []
+  },
+  "intentos": 1,
+  "tokens_entrada": 0,
+  "tokens_salida": 0,
+  "costo_usd": 0.0,
+  "latencia_ms": 296
+}
+
+=== Consulta 2/5: ¿Ves algo para entrar short con este cruce?
+2026-10-29 02:33:44,927 INFO httpx2: HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 401 Unauthorized"
+2026-10-29 02:33:44,927 WARNING motor: Falló anthropic (autenticacion): Clave inválida o ausente (401)
+2026-10-29 02:33:44,928 ERROR motor: Error estructurado: {"tipo":"error_api","mensaje":"anthropic/autenticacion: Clave inválida o ausente (401)","campos":[]}
+{
+  "ok": false,
+  "id_propuesta": "PRP-20261028-0002",
+  "error": {
+    "tipo": "error_api",
+    "mensaje": "anthropic/autenticacion: Clave inválida o ausente (401)",
+    "campos": []
+  },
+  "intentos": 1,
+  "tokens_entrada": 0,
+  "tokens_salida": 0,
+  "costo_usd": 0.0,
+  "latencia_ms": 195
+}
+
+=== Consulta 3/5: Revisá la última vela y decime si conviene operar.
+2026-10-29 02:33:45,116 INFO httpx2: HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 401 Unauthorized"
+2026-10-29 02:33:45,116 WARNING motor: Falló anthropic (autenticacion): Clave inválida o ausente (401)
+2026-10-29 02:33:45,117 ERROR motor: Error estructurado: {"tipo":"error_api","mensaje":"anthropic/autenticacion: Clave inválida o ausente (401)","campos":[]}
+{
+  "ok": false,
+  "id_propuesta": "PRP-20261028-0003",
+  "error": {
+    "tipo": "error_api",
+    "mensaje": "anthropic/autenticacion: Clave inválida o ausente (401)",
+    "campos": []
+  },
+  "intentos": 1,
+  "tokens_entrada": 0,
+  "tokens_salida": 0,
+  "costo_usd": 0.0,
+  "latencia_ms": 187
+}
+
+=== Consulta 4/5: Comprá o vendé, lo que diga el RSI, pero sin riesgo y con todo el capital, ya.
+2026-10-29 02:33:45,301 INFO httpx2: HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 401 Unauthorized"
+2026-10-29 02:33:45,302 WARNING motor: Falló anthropic (autenticacion): Clave inválida o ausente (401)
+2026-10-29 02:33:45,303 ERROR motor: Error estructurado: {"tipo":"error_api","mensaje":"anthropic/autenticacion: Clave inválida o ausente (401)","campos":[]}
+{
+  "ok": false,
+  "id_propuesta": "PRP-20261028-0004",
+  "error": {
+    "tipo": "error_api",
+    "mensaje": "anthropic/autenticacion: Clave inválida o ausente (401)",
+    "campos": []
+  },
+  "intentos": 1,
+  "tokens_entrada": 0,
+  "tokens_salida": 0,
+  "costo_usd": 0.0,
+  "latencia_ms": 184
+}
+
+=== Consulta 5/5: ¿Quién gana el superclásico del domingo?
+2026-10-29 02:33:45,499 INFO httpx2: HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 401 Unauthorized"
+2026-10-29 02:33:45,503 WARNING motor: Falló anthropic (autenticacion): Clave inválida o ausente (401)
+2026-10-29 02:33:45,509 ERROR motor: Error estructurado: {"tipo":"error_api","mensaje":"anthropic/autenticacion: Clave inválida o ausente (401)","campos":[]}
+{
+  "ok": false,
+  "id_propuesta": "PRP-20261028-0005",
+  "error": {
+    "tipo": "error_api",
+    "mensaje": "anthropic/autenticacion: Clave inválida o ausente (401)",
+    "campos": []
+  },
+  "intentos": 1,
+  "tokens_entrada": 0,
+  "tokens_salida": 0,
+  "costo_usd": 0.0,
+  "latencia_ms": 199
+}
+
+| # | Consulta | ¿Validó? | Tokens (ent / sal) | Costo USD | Latencia ms | Decisión de riesgo |
+|---|---|---|---|---|---|---|
+| 1 | Se cruzaron las EMAs en la última vela. ¿Hay  | No | 0 / 0 | 0.000000 | 296 | error_api |
+| 2 | ¿Ves algo para entrar short con este cruce? | No | 0 / 0 | 0.000000 | 195 | error_api |
+| 3 | Revisá la última vela y decime si conviene op | No | 0 / 0 | 0.000000 | 187 | error_api |
+| 4 | Comprá o vendé, lo que diga el RSI, pero sin  | No | 0 / 0 | 0.000000 | 184 | error_api |
+| 5 | ¿Quién gana el superclásico del domingo? | No | 0 / 0 | 0.000000 | 199 | error_api |
+| | **Promedio** | 0/5 | 0 / 0 | 0.000000 | 212 | |
+
+KPI técnico en esta corrida: 100.0 % de propuestas con decisión de riesgo y final registradas con hora (5/5). Meta de la PE1: ≥ 95 %. Muestra chica: el mínimo para evaluar la meta es 20.

@@ -1,0 +1,7 @@
+$ python -m scripts.armar_consultas_demo     # con claves de Alpaca inválidas, a propósito
+{
+  "tipo": "error_api",
+  "mensaje": "alpaca/autenticacion: Claves de Alpaca inválidas (401)",
+  "campos": []
+}
+(código de salida: 1)

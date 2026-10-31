@@ -1,0 +1,23 @@
+$ python -m scripts.verificar_alpaca
+Ahora: 2026-10-29 05:31 UTC
+
+== 1. IEX hasta ahora: feed=iex, hasta 2026-10-29 05:31 UTC
+   234 velas · primera 10-26 13:30 · última 10-28 19:55 UTC (cierra hace 571 min) · cierre 772.28
+
+== 2a. SIP hasta hace 16 min: feed=sip, hasta 2026-10-29 05:15 UTC
+   234 velas · primera 10-26 13:30 · última 10-28 19:55 UTC (cierra hace 571 min) · cierre 772.31
+
+== 2b. SIP hasta ahora: feed=sip, hasta 2026-10-29 05:31 UTC
+   ERROR {"tipo":"error_api","mensaje":"alpaca/permiso: Error 403 de Alpaca: subscription does not permit querying recent SIP data","campos":[]}
+
+== 2c. SIP demorado (delayed_sip) hasta ahora: feed=delayed_sip, hasta 2026-10-29 05:31 UTC
+   ERROR {"tipo":"error_api","mensaje":"alpaca/otro: Error 400 de Alpaca: invalid feed: delayed_sip","campos":[]}
+
+== 3. Cierre IEX contra SIP en las mismas velas
+   10-28 19:45 UTC · IEX 771.88 · SIP 771.89 · 0.001 %
+   10-28 19:50 UTC · IEX 771.99 · SIP 771.99 · 0.000 %
+   10-28 19:55 UTC · IEX 772.28 · SIP 772.31 · 0.004 %
+   234 velas comparadas · diferencia media 0.0037 % · máxima 0.0261 % · velas SIP sin par en IEX: 0
+
+== 4. Cuenta (get_account)
+   {'cuenta': 'PA***', 'estado': 'ACTIVE', 'paper': True, 'moneda': 'USD'}

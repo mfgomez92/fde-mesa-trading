@@ -1,0 +1,13 @@
+# Secretos: nunca al repo
+.env
+.env.*
+!.env.example
+
+# Entorno y caches de Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Bitácora local de las corridas
+bitacora/

@@ -1,0 +1,94 @@
+$ python -m src.motor --demo-errores     # MODELO_ANTHROPIC=claude-opus-5-5
+Velas: Alpaca, feed IEX, descargadas el 2026-10-29T05:29:08+00:00
+Proveedores en orden: anthropic/claude-opus-5-5
+
+=== Error 1: entrada inválida (RSI fuera de rango e id mal formado). No se llama al modelo.
+2026-10-29 02:33:21,255 ERROR motor: Entrada inválida en [id_propuesta]: String should match pattern '^PRP-\d{8}-\d{4}$'
+2026-10-29 02:33:21,256 ERROR motor: Entrada inválida en [indicadores -> rsi]: Input should be less than or equal to 100
+{
+  "ok": false,
+  "id_propuesta": "123",
+  "error": {
+    "tipo": "entrada_invalida",
+    "mensaje": "La consulta no cumple el contrato",
+    "campos": [
+      {
+        "campo": "id_propuesta",
+        "mensaje": "String should match pattern '^PRP-\\d{8}-\\d{4}$'",
+        "tipo": "string_pattern_mismatch"
+      },
+      {
+        "campo": "indicadores -> rsi",
+        "mensaje": "Input should be less than or equal to 100",
+        "tipo": "less_than_equal"
+      }
+    ]
+  },
+  "intentos": 0,
+  "tokens_entrada": 0,
+  "tokens_salida": 0,
+  "costo_usd": 0.0,
+  "latencia_ms": 0
+}
+
+=== Error 2: la primera salida del modelo se reemplaza por una inválida. El motor reintenta.
+2026-10-29 02:33:25,416 INFO httpx2: HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2026-10-29 02:33:25,498 WARNING motor: Intento 1: salida inválida en [confianza]: Input should be less than or equal to 1
+2026-10-29 02:33:25,498 INFO motor: Reintento: le devuelvo al modelo los campos que fallaron
+2026-10-29 02:33:30,955 INFO httpx2: HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+{
+  "ok": true,
+  "id_propuesta": "PRP-20261028-0008",
+  "salida": {
+    "clasificacion": "senal",
+    "accion": "comprar",
+    "precio_entrada": 771.88,
+    "stop_loss": 770.87,
+    "take_profit": 773.9,
+    "confianza": 0.55,
+    "motivo": "La EMA 9 (771.27) está apenas por encima de la EMA 21 (771.22) y el RSI 14 (56.4) está entre 50 y 70, así que hay señal de compra. La confianza es moderada porque el cruce es muy reciente y la separación es de solo 0.05 USD. El stop va a 1 ATR (1.01 USD) por debajo de la entrada y el objetivo a 2 veces el riesgo; además corregí el stop de la respuesta anterior, que estaba por encima de la entrada, algo inválido para una compra."
+  },
+  "riesgo": {
+    "decision": "rechazada",
+    "codigo_motivo": "CONFIANZA_BAJA",
+    "detalle": "Confianza 0.55 < mínimo 0.60",
+    "version_reglas": "reglas-v0.2"
+  },
+  "intentos": 2,
+  "proveedor": "anthropic",
+  "modelo": "claude-opus-5-5",
+  "tokens_entrada": 3206,
+  "tokens_salida": 683,
+  "costo_usd": 0.026484,
+  "latencia_ms": 9700
+}
+
+=== Error 3: las dos salidas son inválidas. El motor devuelve un error estructurado.
+2026-10-29 02:33:33,896 INFO httpx2: HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2026-10-29 02:33:33,898 WARNING motor: Intento 1: salida inválida en [confianza]: Input should be less than or equal to 1
+2026-10-29 02:33:33,898 INFO motor: Reintento: le devuelvo al modelo los campos que fallaron
+2026-10-29 02:33:39,943 INFO httpx2: HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2026-10-29 02:33:39,945 WARNING motor: Intento 2: salida inválida en [confianza]: Input should be less than or equal to 1
+2026-10-29 02:33:39,947 ERROR motor: Error estructurado: {"tipo":"salida_invalida","mensaje":"La salida no pasó la validación después de 2 intento(s)","campos":[{"campo":"confianza","mensaje":"Input should be less than or equal to 1","tipo":"less_than_equal"}]}
+{
+  "ok": false,
+  "id_propuesta": "PRP-20261028-0009",
+  "error": {
+    "tipo": "salida_invalida",
+    "mensaje": "La salida no pasó la validación después de 2 intento(s)",
+    "campos": [
+      {
+        "campo": "confianza",
+        "mensaje": "Input should be less than or equal to 1",
+        "tipo": "less_than_equal"
+      }
+    ]
+  },
+  "intentos": 2,
+  "proveedor": "anthropic",
+  "modelo": "claude-opus-5-5",
+  "tokens_entrada": 3206,
+  "tokens_salida": 751,
+  "costo_usd": 0.027844,
+  "latencia_ms": 8987
+}

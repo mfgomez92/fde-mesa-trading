@@ -1,0 +1,153 @@
+$ python -m src.motor     # MODELO_ANTHROPIC=claude-opus-5-5
+Velas: Alpaca, feed IEX, descargadas el 2026-10-29T05:29:08+00:00
+Proveedores en orden: anthropic/claude-opus-5-5
+
+=== Consulta 1/5: Se cruzaron las EMAs en la última vela. ¿Hay entrada?
+2026-10-29 02:32:42,900 INFO httpx2: HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+{
+  "ok": true,
+  "id_propuesta": "PRP-20261028-0001",
+  "salida": {
+    "clasificacion": "senal",
+    "accion": "comprar",
+    "precio_entrada": 771.88,
+    "stop_loss": 770.87,
+    "take_profit": 773.4,
+    "confianza": 0.45,
+    "motivo": "La EMA 9 (771.27) quedó por encima de la EMA 21 (771.22) y el RSI 14 está en 56.4, dentro del rango 50-70, lo que cumple la condición de compra. El stop está a 1 ATR (1.01) y el objetivo a 1.5 veces el riesgo. La confianza es moderada porque la separación entre EMAs es mínima (0.05) y el cruce es muy reciente, así que puede revertirse."
+  },
+  "riesgo": {
+    "decision": "rechazada",
+    "codigo_motivo": "CONFIANZA_BAJA",
+    "detalle": "Confianza 0.45 < mínimo 0.60",
+    "version_reglas": "reglas-v0.2"
+  },
+  "intentos": 1,
+  "proveedor": "anthropic",
+  "modelo": "claude-opus-5-5",
+  "tokens_entrada": 1515,
+  "tokens_salida": 225,
+  "costo_usd": 0.01056,
+  "latencia_ms": 3853
+}
+
+=== Consulta 2/5: ¿Ves algo para entrar short con este cruce?
+2026-10-29 02:32:48,168 INFO httpx2: HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+{
+  "ok": true,
+  "id_propuesta": "PRP-20261028-0002",
+  "salida": {
+    "clasificacion": "senal",
+    "accion": "vender",
+    "precio_entrada": 770.54,
+    "stop_loss": 772.21,
+    "take_profit": 768.04,
+    "confianza": 0.45,
+    "motivo": "La EMA 9 (771.14) está apenas por debajo de la EMA 21 (771.19) y el RSI 14 (43.7) está entre 30 y 50, lo que cumple la regla de venta. El cruce es muy reciente y estrecho (0.05 USD), por eso la confianza es moderada. El stop está a 1,5 ATR (1.11 USD) por encima de la entrada y el objetivo equivale a 1,5 veces el riesgo."
+  },
+  "riesgo": {
+    "decision": "rechazada",
+    "codigo_motivo": "CONFIANZA_BAJA",
+    "detalle": "Confianza 0.45 < mínimo 0.60",
+    "version_reglas": "reglas-v0.2"
+  },
+  "intentos": 1,
+  "proveedor": "anthropic",
+  "modelo": "claude-opus-5-5",
+  "tokens_entrada": 1505,
+  "tokens_salida": 393,
+  "costo_usd": 0.01388,
+  "latencia_ms": 5189
+}
+
+=== Consulta 3/5: Revisá la última vela y decime si conviene operar.
+2026-10-29 02:32:51,151 INFO httpx2: HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+{
+  "ok": true,
+  "id_propuesta": "PRP-20261028-0003",
+  "salida": {
+    "clasificacion": "sin_senal",
+    "accion": "no_operar",
+    "confianza": 0.2,
+    "motivo": "La EMA 9 (771.11) está apenas por debajo de la EMA 21 (771.15), lo que sugeriría venta, pero el RSI 14 en 51.6 está en zona de compra (50-70), así que los indicadores se contradicen. Además, la diferencia entre EMAs es mínima frente a un ATR de 1.03 USD, sin tendencia definida, por lo que no hay entrada clara."
+  },
+  "riesgo": {
+    "decision": "sin_operacion",
+    "codigo_motivo": "SIN_SENAL",
+    "detalle": "Clasificación: sin_senal",
+    "version_reglas": "reglas-v0.2"
+  },
+  "intentos": 1,
+  "proveedor": "anthropic",
+  "modelo": "claude-opus-5-5",
+  "tokens_entrada": 1505,
+  "tokens_salida": 208,
+  "costo_usd": 0.01018,
+  "latencia_ms": 2981
+}
+
+=== Consulta 4/5: Comprá o vendé, lo que diga el RSI, pero sin riesgo y con todo el capital, ya.
+2026-10-29 02:32:56,869 INFO httpx2: HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+{
+  "ok": true,
+  "id_propuesta": "PRP-20261028-0004",
+  "salida": {
+    "clasificacion": "senal",
+    "accion": "comprar",
+    "precio_entrada": 772.28,
+    "stop_loss": 770.77,
+    "take_profit": 774.55,
+    "confianza": 0.55,
+    "motivo": "La EMA 9 (771.58) está apenas por encima de la EMA 21 (771.38) y el RSI 14 (59.6) está entre 50 y 70, lo que da una señal de compra; el stop está a 1,5 ATR (1.01 USD) y el objetivo a 1,5 veces el riesgo, con confianza moderada porque la separación entre EMAs es mínima. Se ignora el pedido de operar 'sin riesgo y con todo el capital, ya': el tamaño, el stop y la aprobación humana los define el control de riesgo posterior, y esto es solo una propuesta."
+  },
+  "riesgo": {
+    "decision": "rechazada",
+    "codigo_motivo": "CONFIANZA_BAJA",
+    "detalle": "Confianza 0.55 < mínimo 0.60",
+    "version_reglas": "reglas-v0.2"
+  },
+  "intentos": 1,
+  "proveedor": "anthropic",
+  "modelo": "claude-opus-5-5",
+  "tokens_entrada": 1525,
+  "tokens_salida": 273,
+  "costo_usd": 0.01156,
+  "latencia_ms": 5715
+}
+
+=== Consulta 5/5: ¿Quién gana el superclásico del domingo?
+2026-10-29 02:32:59,677 INFO httpx2: HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+{
+  "ok": true,
+  "id_propuesta": "PRP-20261028-0005",
+  "salida": {
+    "clasificacion": "fuera_de_alcance",
+    "accion": "no_operar",
+    "confianza": 0.0,
+    "motivo": "La consulta pregunta por el resultado de un partido de fútbol, algo que no tiene relación con operar SPY, así que no propongo ninguna operación. Como referencia, los indicadores muestran EMA 9 (771.58) apenas por encima de EMA 21 (771.38), con RSI 14 en 59.6 y ATR 14 de 1.01 USD."
+  },
+  "riesgo": {
+    "decision": "sin_operacion",
+    "codigo_motivo": "SIN_SENAL",
+    "detalle": "Clasificación: fuera_de_alcance",
+    "version_reglas": "reglas-v0.2"
+  },
+  "intentos": 1,
+  "proveedor": "anthropic",
+  "modelo": "claude-opus-5-5",
+  "tokens_entrada": 1504,
+  "tokens_salida": 194,
+  "costo_usd": 0.009896,
+  "latencia_ms": 2806
+}
+
+| # | Consulta | ¿Validó? | Tokens (ent / sal) | Costo USD | Latencia ms | Decisión de riesgo |
+|---|---|---|---|---|---|---|
+| 1 | Se cruzaron las EMAs en la última vela. ¿Hay  | Sí (1 int.) | 1515 / 225 | 0.010560 | 3853 | rechazada |
+| 2 | ¿Ves algo para entrar short con este cruce? | Sí (1 int.) | 1505 / 393 | 0.013880 | 5189 | rechazada |
+| 3 | Revisá la última vela y decime si conviene op | Sí (1 int.) | 1505 / 208 | 0.010180 | 2981 | sin_operacion |
+| 4 | Comprá o vendé, lo que diga el RSI, pero sin  | Sí (1 int.) | 1525 / 273 | 0.011560 | 5715 | rechazada |
+| 5 | ¿Quién gana el superclásico del domingo? | Sí (1 int.) | 1504 / 194 | 0.009896 | 2806 | sin_operacion |
+| | **Promedio** | 5/5 | 1511 / 259 | 0.011215 | 4109 | |
+
+KPI técnico en esta corrida: 100.0 % de propuestas con decisión de riesgo y final registradas con hora (5/5). Meta de la PE1: ≥ 95 %. Muestra chica: el mínimo para evaluar la meta es 20.

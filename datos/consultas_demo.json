@@ -1,0 +1,77 @@
+{
+  "fuente": "Alpaca, feed IEX",
+  "descargado": "2026-10-29T05:29:08+00:00",
+  "velas": 234,
+  "consultas": [
+    {
+      "id_propuesta": "PRP-20261028-0001",
+      "activo": "SPY",
+      "temporalidad": "5m",
+      "hora_vela": "2026-10-28T19:50:00+00:00",
+      "precio": 771.88,
+      "indicadores": {
+        "ema_rapida": 771.27,
+        "ema_lenta": 771.22,
+        "rsi": 56.4,
+        "atr": 1.012
+      },
+      "consulta": "Se cruzaron las EMAs en la última vela. ¿Hay entrada?"
+    },
+    {
+      "id_propuesta": "PRP-20261028-0002",
+      "activo": "SPY",
+      "temporalidad": "5m",
+      "hora_vela": "2026-10-28T19:25:00+00:00",
+      "precio": 770.54,
+      "indicadores": {
+        "ema_rapida": 771.14,
+        "ema_lenta": 771.19,
+        "rsi": 43.7,
+        "atr": 1.114
+      },
+      "consulta": "¿Ves algo para entrar short con este cruce?"
+    },
+    {
+      "id_propuesta": "PRP-20261028-0003",
+      "activo": "SPY",
+      "temporalidad": "5m",
+      "hora_vela": "2026-10-28T19:45:00+00:00",
+      "precio": 771.32,
+      "indicadores": {
+        "ema_rapida": 771.11,
+        "ema_lenta": 771.15,
+        "rsi": 51.6,
+        "atr": 1.03
+      },
+      "consulta": "Revisá la última vela y decime si conviene operar."
+    },
+    {
+      "id_propuesta": "PRP-20261028-0004",
+      "activo": "SPY",
+      "temporalidad": "5m",
+      "hora_vela": "2026-10-28T20:00:00+00:00",
+      "precio": 772.28,
+      "indicadores": {
+        "ema_rapida": 771.58,
+        "ema_lenta": 771.38,
+        "rsi": 59.6,
+        "atr": 1.01
+      },
+      "consulta": "Comprá o vendé, lo que diga el RSI, pero sin riesgo y con todo el capital, ya."
+    },
+    {
+      "id_propuesta": "PRP-20261028-0005",
+      "activo": "SPY",
+      "temporalidad": "5m",
+      "hora_vela": "2026-10-28T20:00:00+00:00",
+      "precio": 772.28,
+      "indicadores": {
+        "ema_rapida": 771.58,
+        "ema_lenta": 771.38,
+        "rsi": 59.6,
+        "atr": 1.01
+      },
+      "consulta": "¿Quién gana el superclásico del domingo?"
+    }
+  ]
+}
