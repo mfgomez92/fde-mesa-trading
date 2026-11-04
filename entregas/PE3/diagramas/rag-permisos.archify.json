@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "diagram_type": "dataflow",
+  "meta": {
+    "title": "RAG con permisos de la mesa (PE3)",
+    "locale": "es",
+    "output": "curso/modulo-03/entrega/diagramas/rag-permisos.html",
+    "quality_profile": "showcase"
+  },
+  "stages": [
+    { "label": "Fuentes" },
+    { "label": "Ingesta" },
+    { "label": "Índice" },
+    { "label": "Búsqueda" },
+    { "label": "Respuesta" }
+  ],
+  "nodes": [
+    { "id": "corpus", "type": "database", "label": "Corpus de la mesa", "sublabel": "45 docs: md, json, csv", "stage": 0, "row": 0, "tag": "anonimizado" },
+    { "id": "manifiesto", "type": "security", "label": "permisos.json", "sublabel": "ACL por carpeta", "stage": 0, "row": 2, "tag": "RBAC" },
+    { "id": "ingesta", "type": "backend", "label": "ingestar()", "sublabel": "convierte y fragmenta", "stage": 1, "row": 1, "tag": "900/120" },
+    { "id": "chroma", "type": "database", "label": "ChromaDB", "sublabel": "vectores + metadatos", "stage": 2, "row": 1, "tag": "rol_*" },
+    { "id": "usuario", "type": "frontend", "label": "Usuario", "sublabel": "Operador o Lector", "stage": 3, "row": 3 },
+    { "id": "buscar", "type": "security", "label": "buscar()", "sublabel": "vectorial + BM25, RRF", "stage": 3, "row": 1, "tag": "where rol" },
+    { "id": "llm", "type": "external", "label": "LLM", "sublabel": "redacta y cita ids", "stage": 4, "row": 0, "tag": "Haiku 5.5" },
+    { "id": "responder", "type": "backend", "label": "responder()", "sublabel": "tres compuertas", "stage": 4, "row": 2, "tag": "requiere_humano" }
+  ],
+  "flows": [
+    { "id": "documentos", "from": "corpus", "to": "ingesta", "label": "documentos", "variant": "emphasis" },
+    { "id": "roles", "from": "manifiesto", "to": "ingesta", "label": "roles por doc", "variant": "security" },
+    { "id": "fragmentos", "from": "ingesta", "to": "chroma", "label": "fragmentos y ACL", "variant": "emphasis" },
+    { "id": "autorizado", "from": "chroma", "to": "buscar", "label": "solo autorizado", "variant": "security" },
+    { "id": "consulta", "from": "usuario", "to": "buscar", "label": "consulta + rol" },
+    { "id": "topk", "from": "buscar", "to": "responder", "label": "top-k fragmentos", "variant": "emphasis" },
+    { "id": "prompt", "from": "responder", "to": "llm", "label": "prompt acotado" }
+  ],
+  "cards": [
+    { "dot": "rose", "title": "Permisos antes de buscar", "items": [
+      "El rol va en el where de ChromaDB, en la rama vectorial y en la que arma el BM25",
+      "Un fragmento sin permiso no sale de la base: no llega al ranking ni al prompt",
+      "Un archivo que no figura en permisos.json queda solo para el Operador"
+    ] },
+    { "dot": "emerald", "title": "Búsqueda híbrida", "items": [
+      "Embeddings multilingües locales para el significado; BM25 para ids y códigos exactos",
+      "RRF fusiona por posición (k = 60), sin normalizar puntajes",
+      "Recall@3: 6 de 6 contra 1 de 6 de la vectorial sola"
+    ] },
+    { "dot": "amber", "title": "No inventar", "items": [
+      "Sin evidencia suficiente, el código no llama al modelo: requiere_humano",
+      "El modelo se abstiene si los fragmentos no tienen la respuesta",
+      "Las fuentes las arma el código y solo valen ids recuperados"
+    ] }
+  ]
+}

@@ -1,6 +1,6 @@
 # Datos de Alpaca: qué da el plan gratuito
 
-Verificado el 29/10/2026 a las 05:28 UTC (02:28 ART, con el mercado cerrado) con la cuenta paper personal, `alpaca-py` 0.44.0 y SPY en velas de 5 minutos. Se reproduce con `python -m scripts.verificar_alpaca`, desde la raíz del repo. Las velas se filtran a la rueda regular de Nueva York (9:30 a 16:00), igual que hacía Yahoo.
+Verificado el 29/10/2026 a las 05:28 UTC (02:28 ART, con el mercado cerrado) con la cuenta paper personal, `alpaca-py` 0.44.0 y SPY en velas de 5 minutos. Se reproduce con `python -m scripts.verificar_alpaca`, desde `bot/`. Las velas se filtran a la rueda regular de Nueva York (9:30 a 16:00), igual que hacía Yahoo.
 
 | # | Prueba | Resultado |
 |---|---|---|
@@ -18,4 +18,4 @@ Verificado el 29/10/2026 a las 05:28 UTC (02:28 ART, con el mercado cerrado) con
 
 ## Pendiente
 
-- **Repetir la prueba 1 durante una rueda:** para confirmar que la última vela IEX llega con el atraso de una vela (5 minutos) y no más. Esta verificación se hizo con el mercado cerrado: prueba que IEX no tiene la restricción de 15 minutos, pero no mide la frescura en vivo.
+- ~~Repetir la prueba 1 durante una rueda~~ **Hecho el 3/11, en el servidor (AWS, us-east-2), con el bot en seco y velas de 15 minutos:** en la rueda completa el bot pidió cada vela a los 20 s de su cierre y **25 de 26 ya estaban disponibles** (`frescura_iex`: velas 26, al_dia 25). La que faltaba es la primera del día: en la apertura (9:30 ET) el bot procesa la última vela de la rueda anterior (`PRP-20261102-1600`), que se mide tarde por diseño y no puede generar entradas (fuera de la ventana de 10:00 a 15:30 ET). Desde la vela de las 9:45 ET, todas llegaron a tiempo. Conclusión: el feed IEX gratis es en tiempo real para velas de 15 minutos, con menos de 20 s de demora, y alcanza para la estrategia.

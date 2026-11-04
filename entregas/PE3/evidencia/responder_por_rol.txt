@@ -1,0 +1,40 @@
+# Versión pública de la evidencia de la PE3. La medición se hizo sobre el corpus real de la mesa, que no se
+# publica; el PDF completo se entregó por la plataforma. Los números son los de la corrida; se sacaron los
+# nombres de archivos del corpus, los ids, los códigos y el texto de las respuestas.
+
+# La misma pregunta restringida (un dato de un export de operaciones), hecha por los dos roles,
+# con Haiku 5.5 y el corpus real. Salida real abreviada; el monto, los archivos y la sección están generalizados.
+
+$ python -m src.rag responder "¿Qué P&L bruto tuvo la operación P01 del lote de prueba?" --rol lector
+{
+  "clasificacion": "sin_senal",
+  "accion": "no_operar",
+  "confianza": 0.0,
+  "respuesta": "No encontré la respuesta en los documentos.",
+  "fuentes": [],
+  "requiere_humano": true,
+  "confianza_modelo": 0.05
+}
+# El prompt que recibió el modelo no tenía ningún fragmento de los exports (0 de 817 visibles para el Lector).
+
+$ python -m src.rag responder "…la misma…" --rol operador
+{
+  "clasificacion": "sin_senal",
+  "accion": "no_operar",
+  "confianza": 0.58,
+  "respuesta": "La operación P01 (lote de prueba) tuvo un P&L bruto de [monto] según el registro de la mesa.",
+  "fuentes": [{"documento": "[export de operaciones]", "seccion": "[registro P01]", "fragmento_id": "[export de operaciones]#000"}],
+  "requiere_humano": false,
+  "confianza_modelo": 0.95
+}
+
+$ python -m src.rag responder "[pregunta sobre un límite duro del mandato]" --rol lector
+{
+  "clasificacion": "sin_senal",
+  "accion": "no_operar",
+  "confianza": 0.83,
+  "respuesta": "[valor del límite y condición para reactivar, con las dos citas]",
+  "fuentes": [{"documento": "[mandato]", "fragmento_id": "[mandato]#005"}, {"documento": "[documento general de la mesa]", "fragmento_id": "[documento general de la mesa]#031"}],
+  "requiere_humano": false,
+  "confianza_modelo": 0.95
+}

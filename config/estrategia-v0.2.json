@@ -1,0 +1,55 @@
+{
+  "version": "estrategia-v0.2",
+  "fuente": "Respuesta de la mesa del 02/11/2026 (caso/relevamiento/mesa-2026-11-02/RESPUESTA.md)",
+  "activo": "SPY",
+  "temporalidades_candidatas": ["5m", "15m"],
+  "objetivos_candidatos_R": [2, 3],
+  "indicadores": {
+    "ema_rapida": 9,
+    "ema_lenta": 21,
+    "rsi": 14,
+    "atr": 14,
+    "sma_diaria_regimen": 50,
+    "vwap": "del día, desde las 09:30 ET, precio típico (máximo + mínimo + cierre) / 3 ponderado por volumen"
+  },
+  "senal": {
+    "cruce": "en la vela t: EMA 9 cruzó a EMA 21 entre t-1 y t (largo: ema9[t-1] <= ema21[t-1] y ema9[t] > ema21[t]; corto: al revés)",
+    "largo": {"rsi_min": 50, "rsi_max": 70, "precio_vs_vwap": "cierre[t] > vwap[t]", "regimen": "último cierre diario > su SMA 50"},
+    "corto": {"rsi_min": 30, "rsi_max": 50, "precio_vs_vwap": "cierre[t] < vwap[t]", "regimen": "último cierre diario < su SMA 50"},
+    "regimen_punto_en_el_tiempo": "se usa el cierre diario de la rueda anterior y la SMA 50 calculada hasta esa rueda (sin mirar el día en curso)"
+  },
+  "orden": {
+    "tipo": "bracket: entrada a mercado + stop + take profit",
+    "stop_en_atr": 1.5,
+    "precio_de_referencia": "cierre de la vela t (stop y objetivo se calculan desde ahí, como en vivo)",
+    "objetivo": "entrada de referencia ± objetivo_R × (1,5 × ATR[t])"
+  },
+  "horario_et": {
+    "entradas_desde": "10:00",
+    "entradas_hasta": "15:30",
+    "cierre_forzado": "15:55",
+    "sin_posiciones_overnight": true
+  },
+  "reglas_riesgo": {
+    "version": "reglas-v0.3",
+    "riesgo_por_operacion_pct_equity": 0.10,
+    "multiplicador_etapa": {"E1_shadow": 1.0, "E2_paper": 0.25, "E3_paper": 1.0},
+    "perdida_diaria_maxima_pct_equity": 0.30,
+    "operaciones_maximas_por_dia": 4,
+    "una_posicion_a_la_vez": true,
+    "stop_maximo_pct_precio": 1.0,
+    "stop_mas_lejos": "se descarta",
+    "relacion_minima_riesgo_beneficio": 1.5,
+    "distancia_maxima_entrada_pct": 0.3,
+    "dato_atrasado_max_velas": 2,
+    "blackouts": "config/macro_blackout.json"
+  },
+  "veto_llm": {
+    "obligatorio_para_entrar": true,
+    "timeout_s": 20,
+    "falla": "cerrada: sin respuesta válida, la señal se descarta y se registra",
+    "interviene_en_salidas": false,
+    "contrafactico": "cada veto guarda el resultado que habría tenido la operación",
+    "apagado": "si en 50 señales los vetos no mejoran el resultado"
+  }
+}

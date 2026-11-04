@@ -5,7 +5,7 @@
 3. Diferencia entre el cierre IEX y el SIP en las mismas velas.
 4. get_account(): que responda y que sea paper. No imprime saldos ni el número de cuenta.
 
-Uso, desde la raíz del repo:  python -m scripts.verificar_alpaca
+Uso, desde bot/:  python -m scripts.verificar_alpaca
 """
 
 from __future__ import annotations

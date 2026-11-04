@@ -4,7 +4,7 @@ Elige momentos reales de los últimos días: un cruce alcista, uno bajista y uno
 sin señal clara. Las consultas 4 (confusa) y 5 (fuera de tema) usan la última vela.
 El archivo guarda también la fuente de las velas y la hora de descarga.
 
-Uso, desde la raíz del repo:  python -m scripts.armar_consultas_demo
+Uso, desde bot/:  python -m scripts.armar_consultas_demo
 """
 
 from __future__ import annotations

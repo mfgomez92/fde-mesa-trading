@@ -1,14 +1,32 @@
 # fde-mesa-trading
 
-Proyecto integrador de Matías Gómez para el curso **Forward Deployed Engineer** (Coderhouse, 2026). El cliente es el equipo de inversiones de una fintech argentina (nombre reservado): un bot que opera una cuenta **paper** (simulada) con un LLM que propone, reglas de riesgo en código y una bitácora que mide los KPIs. El repo crece con cada pre-entrega.
+Proyecto integrador de Matías Gómez para el curso **Forward Deployed Engineer** (Coderhouse, 2026). El cliente es el equipo de inversiones de una fintech argentina (nombre reservado): un bot que opera una cuenta **paper** (simulada) con un LLM que propone, reglas de riesgo en código y una bitácora que mide los KPIs.
+
+## Qué es este repo (y qué no)
+
+Es la **versión del curso** del proyecto: tiene solo lo necesario para cumplir y revisar cada pre-entrega (código, tests, PDF, autoevaluación y evidencia). El desarrollo completo vive en un repo privado, del que este se publica con un proceso que copia una lista cerrada de archivos y frena la publicación si encuentra rutas internas, claves, mails o teléfonos reales, o datos de la mesa.
+
+El código está en la raíz y se va actualizando con cada PE; cada entrega queda en `entregas/PEN/`, con su etiqueta `peN`.
+
+**No incluye:**
+
+- datos internos de la empresa ni de la mesa (documentos, exports, mandato, estrategias, nombres de personas);
+- claves, el `.env` ni el número de la cuenta paper (se muestra como `PA***`);
+- las funciones de producto que no son parte de las consignas;
+- el bot operando en paper (operador, despliegue en AWS, vigía y runbook)
+- el backtest y sus datos
+- el corpus real de la mesa y las preguntas y la medición hechas sobre él: el PDF, la autoevaluación y la evidencia de la PE3 son una versión pública con las mismas métricas (el PDF completo se entregó por la plataforma)
+- el detector con la estructura interna de la mesa y el script que la redacta
+- la entrevista y la ficha del caso (`caso/`)
 
 | Pre-entrega | Etiqueta | Qué revisar |
 |---|---|---|
-| PE2 · Motor LLM base y validación estructurada | `pe2` | Este README, `src/motor.py`, el PDF y la evidencia en `entregas/PE2/` |
+| PE2 · Motor LLM base y validación estructurada | `pe2` | `src/motor.py`, el PDF y la evidencia en `entregas/PE2/` |
+| PE3 · RAG con permisos y búsqueda híbrida | `pe3` | `src/rag/`, `tests/test_rag.py`, la autoevaluación y la evidencia en `entregas/PE3/` |
 
 ## Motor LLM base de la mesa (PE2)
 
-Recibe una foto del mercado (SPY en velas de 5 minutos de **Alpaca, feed IEX**, con EMAs, RSI y ATR) y una consulta del operador. Se la pasa a un modelo real (Anthropic, con OpenAI de fallback), valida la respuesta con Pydantic y **decide el riesgo en código**. Registra todo en una bitácora: tokens, costo en USD, latencia y las decisiones con hora.
+Recibe una foto del mercado (SPY en velas de **Alpaca, feed IEX**, con EMAs, RSI y ATR) y una consulta del operador. Se la pasa a un modelo real (Anthropic, con OpenAI de fallback), valida la respuesta con Pydantic y **decide el riesgo en código**. Registra todo en una bitácora: tokens, costo en USD, latencia y las decisiones con hora.
 
 ```
 consulta ──► Entrada (Pydantic) ──► prompt (plantilla) ──► LLM ──► Salida (Pydantic) ──► reglas de riesgo (código) ──► bitácora
@@ -17,31 +35,57 @@ consulta ──► Entrada (Pydantic) ──► prompt (plantilla) ──► LLM
           error estructurado                           error estructurado (causa operativa)
 ```
 
+Desde el 30/10 el motor también puede **calcular la señal en el código** (cruce de EMAs + RSI + ATR) y usar el LLM solo para confirmarla o vetarla con motivo ([por qué](docs/senal_en_codigo.md)): es la lección de la PE2 (la confianza que reporta el modelo cambia entre corridas).
+
+## RAG con permisos y búsqueda híbrida (PE3)
+
+```
+corpus/ + permisos.json ─► ingestar() ─► fragmentos con documento, sección y roles ─► ChromaDB
+consulta + usuario ─► buscar() ─► where={rol_<rol>: true} en la vectorial Y en el BM25 ─► RRF ─► top k
+Entrada (PE2) + usuario ─► responder() ─► sin evidencia: requiere_humano ─ con evidencia: LLM ─► citas verificadas
+```
+
+| Pieza | Archivo | Qué hace |
+|---|---|---|
+| Permisos | `src/rag/permisos.py` | Roles de la PE1 (Operador y Lector), un metadato booleano por rol y el `where` de ChromaDB |
+| Documentos | `src/rag/documentos.py` | Lee Markdown, texto, HTML, PDF, CSV, JSONL y JSON; limpia, pasa las tablas a texto, aplica `permisos.json` y rechaza documentos con rutas internas |
+| Conversores | `src/rag/conversores.py` | Exports (CSV, JSONL) y JSON anidado a Markdown: un título por registro, citable y con su id para BM25 |
+| Fragmentado | `src/rag/fragmentado.py` | `estructural` (por títulos, 900 caracteres, solape de una oración) y `fijo` (300 caracteres), con prefijo de documento y sección |
+| Embeddings | `src/rag/embeddings.py` | `paraphrase-multilingual-MiniLM-L12-v2` local (fastembed) y uno falso para los tests |
+| Búsqueda | `src/rag/busqueda.py` | Vectorial + BM25, fusionadas con RRF (k=60), las dos con el filtro de rol en la consulta a la base |
+| Respuesta | `src/rag/respuesta.py` | `SalidaConFuentes` hereda de `Salida` (PE2) y suma `respuesta`, `fuentes` y `requiere_humano` |
+| Medición | `src/rag/medicion.py` | Recall@k y MRR de las preguntas de prueba, con dos fragmentados y dos modos |
+
+**Datos:** La medición del PDF se hizo sobre el corpus real de la mesa, que no se publica. Acá el RAG corre con un corpus de demo (`corpus/demo/`). El corpus de demo son documentos propios del proyecto (KPIs, criterios de aceptación, proceso TO-BE, datos de Alpaca y reglas de riesgo) con su `permisos.json`: dos son solo del Operador, así que se puede probar el filtro por rol. Las 10 preguntas de prueba y su medición son sobre el corpus real, así que `python -m src.rag medir` no corre acá: los resultados están en el PDF y la evidencia. Los tests del RAG arman su propio corpus en una carpeta temporal y corren completos; el único que necesita el corpus real está marcado `solo_full` y se saltea.
+
 ## Estructura
 
 ```
 fde-mesa-trading/
 ├── README.md             este archivo
-├── requirements.txt      dependencias (pip)
+├── requirements.txt      dependencias (pip), con las mismas versiones que el proyecto
 ├── pyproject.toml        metadatos y configuración de pytest
 ├── .env.example          variables de entorno, sin valores
 ├── .gitignore            incluye .env
-├── entregas/PE2/         PDF de la entrega y salida real de la terminal (evidencia/)
+├── entregas/PEN/         PDF, autoevaluación y evidencia de cada pre-entrega
 ├── src/
 │   ├── motor.py          el motor y la línea de comandos (punto de entrada)
 │   ├── contratos.py      clases Entrada y Salida (el contrato de datos)
 │   ├── prompts.py        plantillas de prompt, separadas del código
 │   ├── proveedores.py    Anthropic, OpenAI y un LLM simulado detrás de una misma interfaz
 │   ├── riesgo.py         reglas de riesgo en código
+│   ├── senal.py          la señal de la estrategia, calculada por el código
+│   ├── prompts_veto.py   prompt del veto: el LLM confirma o veta la señal del código
 │   ├── bitacora.py       bitácora y cálculo de los KPIs
 │   ├── precios.py        precios publicados por modelo
 │   ├── datos_mercado.py  velas de Alpaca e indicadores
-│   └── broker.py         claves de Alpaca, candado paper/real, feed y errores
-├── datos/consultas_demo.json   las 5 consultas de la medición (velas reales de SPY, con la fuente y la hora de descarga)
-├── scripts/
-│   ├── armar_consultas_demo.py   arma las consultas con velas de Alpaca
-│   └── verificar_alpaca.py       verifica qué da el plan gratuito
-├── docs/                 ficha de KPIs, criterios de aceptación y datos_alpaca.md
+│   ├── broker.py         claves de Alpaca, candado paper/real, feed y errores
+│   ├── rag/              RAG con permisos y búsqueda híbrida (PE3)
+├── config/               estrategia y ventanas sin entradas por datos macro
+├── corpus/demo/          corpus de demo del RAG + permisos.json (quién lee cada documento)
+├── datos/consultas_demo.json   las 5 consultas de la medición de la PE2 (velas reales de SPY)
+├── scripts/              armar las consultas y verificar Alpaca
+├── docs/                 ficha de KPIs, criterios de aceptación, proceso TO-BE, datos de Alpaca y señal en código
 └── tests/                tests con el LLM y Alpaca simulados (no necesitan claves ni red)
 ```
 
@@ -100,6 +144,9 @@ $env:PYTHONUTF8 = 1   # la consola de Windows no es UTF-8 por defecto y la salid
 | `python -m src.motor --demo-errores` | muestra una entrada inválida, un reintento y un error estructurado | Sí (LLM) |
 | `python -m scripts.armar_consultas_demo` | vuelve a armar las consultas con las velas más recientes de SPY | Sí (Alpaca) |
 | `python -m scripts.verificar_alpaca` | prueba los feeds IEX y SIP y la conexión a la cuenta paper | Sí (Alpaca) |
+| `python -m src.rag ingestar --carpeta corpus/demo` | ingesta el corpus de demo en ChromaDB (`indice/`) | No (baja el modelo de embeddings la primera vez, ~220 MB) |
+| `python -m src.rag buscar "¿cuál es el stop máximo?" --rol lector` | búsqueda híbrida filtrada por rol (`--modo vectorial` o `bm25` para comparar) | No |
+| `python -m src.rag responder "¿cuál es el stop máximo?" --rol operador` | respuesta con fuentes o `requiere_humano` | Sí (LLM); `--simulado` sin clave |
 
 La bitácora queda en `bitacora/bitacora.jsonl`, con una fila JSON por decisión.
 
@@ -127,7 +174,7 @@ Las velas salen de la API de datos de Alpaca (`StockHistoricalDataClient`), con 
 
 ## Decisiones
 
-- **El modelo propone y el código decide.** `Salida` valida la forma y la coherencia (por ejemplo, en una compra `stop < entrada < objetivo`). `riesgo.py` aplica los límites: confianza mínima, relación riesgo/beneficio, distancia de la entrada y stop máximo automático.
+- **El modelo propone y el código decide.** `Salida` valida la forma y la coherencia (por ejemplo, en una compra `stop < entrada < objetivo`). `riesgo.py` aplica los límites: relación riesgo/beneficio, distancia de la entrada y stop máximo automático.
 - **Dos capas de validación.** Al proveedor se le pasa un JSON Schema "de forma" (campos, tipos y Enum). Las reglas (rangos, patrones y validación cruzada) las verifica Pydantic en nuestro código, así que no dependen de que el proveedor las respete.
 - **Un reintento**, que le devuelve al modelo los campos que fallaron. Si vuelve a fallar, devuelve un error estructurado y la propuesta se descarta con categoría `operativo`, que es lo que mide el KPI de negocio.
 - **Sin dependencia de un único proveedor.** Si la API de Anthropic falla (429, sin conexión, 5xx), el motor prueba con OpenAI. En Anthropic también está activado el fallback del servidor, por si un filtro de seguridad rechaza el pedido.

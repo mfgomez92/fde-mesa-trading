@@ -1,0 +1,38 @@
+{
+  "_nota": "Corpus de demo del curso: documentos propios del proyecto, sin datos de la mesa. Quién puede leer cada uno. Un archivo que no figura acá queda solo para el Operador.",
+  "documentos": {
+    "kpis.md": {
+      "titulo": "Ficha de los KPIs",
+      "roles": [
+        "operador",
+        "lector"
+      ]
+    },
+    "criterios_aceptacion.md": {
+      "titulo": "Criterios de aceptación",
+      "roles": [
+        "operador",
+        "lector"
+      ]
+    },
+    "to-be.md": {
+      "titulo": "Proceso TO-BE",
+      "roles": [
+        "operador",
+        "lector"
+      ]
+    },
+    "datos_alpaca.md": {
+      "titulo": "Datos de Alpaca: plan gratuito",
+      "roles": [
+        "operador"
+      ]
+    },
+    "reglas-riesgo.md": {
+      "titulo": "Reglas de riesgo vigentes",
+      "roles": [
+        "operador"
+      ]
+    }
+  }
+}

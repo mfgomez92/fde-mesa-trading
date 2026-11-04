@@ -11,3 +11,9 @@ __pycache__/
 
 # Bitácora local de las corridas
 bitacora/
+
+# Índice local de ChromaDB del RAG (se regenera con python -m src.rag ingestar --carpeta corpus/demo)
+indice/
+
+# Sistema simulado y checkpoints del agente (PE4): se regeneran solos
+datos/agente/

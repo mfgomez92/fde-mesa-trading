@@ -54,7 +54,7 @@ def claves() -> tuple[str, str]:
     faltan = [nombre for nombre, valor in (("ALPACA_API_KEY", clave), ("ALPACA_SECRET_KEY", secreto)) if not valor]
     if faltan:
         raise ErrorConfiguracion(
-            f"Faltan {' y '.join(faltan)} en .env. Se crean en https://app.alpaca.markets "
+            f"Faltan {' y '.join(faltan)} en bot/.env. Se crean en https://app.alpaca.markets "
             "(cuenta Paper -> API Keys)."
         )
     return clave, secreto

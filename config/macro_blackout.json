@@ -1,0 +1,16 @@
+{
+  "version": "blackout-v1",
+  "fuente_reglas": "Práctica de la mesa (corpus/mesa, documento maestro y journal del 27/10): CPI y NFP sin entradas antes de las 10:00 ET; día de decisión del FOMC sin entradas nuevas desde las 12:00 ET.",
+  "fuente_fechas": "Calendarios públicos de la Reserva Federal (FOMC) y del BLS (CPI, Employment Situation).",
+  "ventanas_et": {
+    "CPI": {"desde": "00:00", "hasta": "10:00"},
+    "NFP": {"desde": "00:00", "hasta": "10:00"},
+    "FOMC": {"desde": "12:00", "hasta": "16:00"}
+  },
+  "fechas": {
+    "FOMC": ["2025-12-10", "2026-01-28", "2026-03-18", "2026-04-29", "2026-06-17", "2026-07-29", "2026-09-16", "2026-10-28", "2026-12-09"],
+    "NFP": ["2026-11-06"],
+    "CPI": []
+  },
+  "nota": "Las entradas del bot empiezan a las 10:00 ET, así que hoy las ventanas de CPI y NFP no restan entradas; se cargan igual por si cambia el horario. Las fechas de NFP y CPI futuras se completan desde el calendario del BLS antes de cada mes."
+}

@@ -38,6 +38,7 @@ class Vela:
     maximo: float
     minimo: float
     cierre: float
+    volumen: float = 0.0
 
 
 def bajar_velas(
@@ -70,7 +71,7 @@ def bajar_velas(
         barras = cliente.get_stock_bars(pedido).data.get(activo, [])
     except (APIError, requests.RequestException) as e:
         raise ErrorAlpaca(error_estructurado(e)) from e
-    velas = [Vela(a_utc(b.timestamp), b.open, b.high, b.low, b.close) for b in barras]
+    velas = [Vela(a_utc(b.timestamp), b.open, b.high, b.low, b.close, float(getattr(b, "volume", 0) or 0)) for b in barras]
     if intervalo != "1d":
         # Alpaca también manda pre-market y after-hours; la estrategia es de la rueda regular
         # (Yahoo, la fuente anterior, solo daba esas velas).
@@ -132,4 +133,31 @@ def atr(velas: list[Vela], periodos: int = 14) -> list[float | None]:
     for i in range(periodos, len(velas)):
         actual = (actual * (periodos - 1) + rangos[i]) / periodos
         resultado[i] = actual
+    return resultado
+
+
+def sma(valores: list[float], periodos: int) -> list[float | None]:
+    """Media móvil simple. None hasta tener `periodos` valores."""
+    resultado: list[float | None] = [None] * len(valores)
+    for i in range(periodos - 1, len(valores)):
+        resultado[i] = sum(valores[i - periodos + 1 : i + 1]) / periodos
+    return resultado
+
+
+def vwap_del_dia(velas: list[Vela]) -> list[float | None]:
+    """VWAP que arranca de cero en cada rueda (fecha de Nueva York).
+
+    Precio típico (máximo + mínimo + cierre) / 3 ponderado por el volumen de cada vela.
+    Con el feed IEX el volumen es solo el de IEX (~2,5 % del total): ver docs/datos_alpaca.md.
+    None mientras el día no tenga volumen.
+    """
+    resultado: list[float | None] = []
+    dia, suma_pv, suma_v = None, 0.0, 0.0
+    for v in velas:
+        fecha = v.hora.astimezone(NUEVA_YORK).date()
+        if fecha != dia:
+            dia, suma_pv, suma_v = fecha, 0.0, 0.0
+        suma_pv += (v.maximo + v.minimo + v.cierre) / 3 * v.volumen
+        suma_v += v.volumen
+        resultado.append(suma_pv / suma_v if suma_v > 0 else None)
     return resultado

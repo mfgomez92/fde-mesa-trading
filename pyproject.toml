@@ -1,7 +1,7 @@
 [project]
-name = "fde-trading-desk-bot"
-version = "0.2.0"
-description = "Motor LLM base de la mesa de trading (Coderhouse FDE, PE2)"
+name = "fde-mesa-trading"
+version = "0.3.0"
+description = "Mesa de trading con LLM (Coderhouse FDE): versión del curso, PE2 a PE3"
 requires-python = ">=3.12"
 dependencies = [
     "anthropic>=2.3,<3",
@@ -10,6 +10,10 @@ dependencies = [
     "python-dotenv>=1.2,<2",
     "alpaca-py>=0.44,<0.45",
     "tzdata>=2026.1",
+    "chromadb>=1.5,<2",
+    "rank-bm25>=0.2.2,<0.3",
+    "fastembed>=0.9,<0.10",
+    "pypdf>=6,<7",
 ]
 
 [project.optional-dependencies]
@@ -19,5 +23,5 @@ dev = ["pytest>=9,<10", "pytest-asyncio>=1.4,<2"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
-# alpaca-py importa websockets.legacy: el aviso es de la dependencia, no del bot
+markers = ["solo_full: necesita el corpus real de la mesa (no se publica en el repo del curso)"]
 filterwarnings = ["ignore::DeprecationWarning:websockets.legacy"]

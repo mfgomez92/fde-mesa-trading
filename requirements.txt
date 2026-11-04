@@ -1,11 +1,15 @@
+# Generado por publicar_lite.py desde el repo full: las versiones son las mismas que usa el bot.
+# PE2: Motor LLM base y validación estructurada
 anthropic>=2.3,<3
 openai>=3.41,<4
 pydantic>=2.14,<3
 python-dotenv>=1.2,<2
-# Datos de mercado y cuenta paper (0.x: cada minor puede romper, por eso el rango es corto)
 alpaca-py>=0.44,<0.45
-# Zonas horarias (rueda de Nueva York): Windows no trae la base del sistema
 tzdata>=2026.1
-# Para correr los tests
 pytest>=9,<10
 pytest-asyncio>=1.4,<2
+# PE3: RAG con permisos y búsqueda híbrida
+chromadb>=1.5,<2
+rank-bm25>=0.2.2,<0.3
+fastembed>=0.9,<0.10
+pypdf>=6,<7

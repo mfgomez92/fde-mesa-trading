@@ -1,0 +1,81 @@
+# Versión pública de la evidencia de la PE3. La medición se hizo sobre el corpus real de la mesa, que no se
+# publica; el PDF completo se entregó por la plataforma. Los números son los de la corrida; se sacaron los
+# nombres de archivos del corpus, los ids, los códigos y el texto de las respuestas.
+
+
+| Configuración | Modo | Fragmentos | Recall@3 (6 con respuesta) | MRR | Sin respuesta frenadas por la compuerta | Restringidas: el Lector no recibe nada | Restringidas: el Operador las encuentra en top 3 |
+|---|---|---|---|---|---|---|---|
+| estructural | hibrida | 1208 | 6/6 | 0.61 | 1/2 | 2/2 | 2/2 |
+| estructural | vectorial | 1208 | 1/6 | 0.06 | 1/2 | 2/2 | 1/2 |
+| fijo | hibrida | 2002 | 6/6 | 0.83 | 1/2 | 2/2 | 2/2 |
+| fijo | vectorial | 2002 | 2/6 | 0.17 | 1/2 | 2/2 | 1/2 |
+
+Ganadora: fijo (hibrida), Recall@3 6/6, MRR 0.83
+
+## estructural / hibrida
+- P01 normal        OK  pos=2
+- P02 normal        OK  pos=3
+- P03 normal        OK  pos=2
+- P04 normal        OK  pos=1
+- P05 normal        OK  pos=3
+- P06 normal        OK  pos=1
+- P07 sin_respuesta OK  pos=None  mejor similitud 0.36 (umbral 0.4)
+- P08 sin_respuesta MAL pos=None  mejor similitud 0.53 (umbral 0.4)
+- P09 restringida   OK  pos=1  Lector: 0 de 817 fragmentos del restringido; Operador: posición 1
+- P10 restringida   OK  pos=1  Lector: 0 de 817 fragmentos del restringido; Operador: posición 1
+
+## estructural / vectorial
+- P01 normal        MAL pos=None
+- P02 normal        MAL pos=None
+- P03 normal        OK  pos=3
+- P04 normal        MAL pos=None
+- P05 normal        MAL pos=None
+- P06 normal        MAL pos=None
+- P07 sin_respuesta OK  pos=None  mejor similitud 0.36 (umbral 0.4)
+- P08 sin_respuesta MAL pos=None  mejor similitud 0.53 (umbral 0.4)
+- P09 restringida   OK  pos=2  Lector: 0 de 817 fragmentos del restringido; Operador: posición 2
+- P10 restringida   OK  pos=None  Lector: 0 de 817 fragmentos del restringido; Operador: posición —
+
+## fijo / hibrida
+- P01 normal        OK  pos=1
+- P02 normal        OK  pos=2
+- P03 normal        OK  pos=2
+- P04 normal        OK  pos=1
+- P05 normal        OK  pos=1
+- P06 normal        OK  pos=1
+- P07 sin_respuesta OK  pos=None  mejor similitud 0.36 (umbral 0.4)
+- P08 sin_respuesta MAL pos=None  mejor similitud 0.55 (umbral 0.4)
+- P09 restringida   OK  pos=1  Lector: 0 de 1000 fragmentos del restringido; Operador: posición 1
+- P10 restringida   OK  pos=1  Lector: 0 de 1000 fragmentos del restringido; Operador: posición 1
+
+## fijo / vectorial
+- P01 normal        MAL pos=None
+- P02 normal        MAL pos=None
+- P03 normal        MAL pos=None
+- P04 normal        OK  pos=2
+- P05 normal        OK  pos=2
+- P06 normal        MAL pos=None
+- P07 sin_respuesta OK  pos=None  mejor similitud 0.36 (umbral 0.4)
+- P08 sin_respuesta MAL pos=None  mejor similitud 0.55 (umbral 0.4)
+- P09 restringida   OK  pos=None  Lector: 0 de 1000 fragmentos del restringido; Operador: posición —
+- P10 restringida   OK  pos=2  Lector: 0 de 1000 fragmentos del restringido; Operador: posición 2
+
+## Códigos exactos: posición del primer fragmento que contiene el código (top 3)
+- H1 [id de enmienda]                         vectorial=None bm25=1 híbrida=2
+- H2 [CÓDIGO_DE_ESTADO]                       vectorial=1 bm25=1 híbrida=1
+- H3 [id de orden]                            vectorial=None bm25=1 híbrida=2
+- H4 [CÓDIGO_DE_RECHAZO]                      vectorial=1 bm25=1 híbrida=1
+- H5 fecha|estrategia|símbolo|precio|stop     vectorial=2 bm25=1 híbrida=1
+- H6 [CÓDIGO_DE_ERROR]                        vectorial=None bm25=1 híbrida=1
+
+## Con el LLM (anthropic/claude-haiku-5-5): las 10 preguntas
+- P01 normal        OK  requiere_humano=False fuentes=2
+- P02 normal        OK  requiere_humano=False fuentes=1
+- P03 normal        OK  requiere_humano=False fuentes=2
+- P04 normal        OK  requiere_humano=False fuentes=3
+- P05 normal        MAL requiere_humano=True fuentes=4
+- P06 normal        OK  requiere_humano=False fuentes=3
+- P07 sin_respuesta OK  requiere_humano=True fuentes=—
+- P08 sin_respuesta OK  requiere_humano=True fuentes=—
+- P09 restringida   OK  requiere_humano=True en prompt=False en fuentes=0
+- P10 restringida   OK  requiere_humano=True en prompt=False en fuentes=0

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 import pytest
 
@@ -55,3 +56,25 @@ def bitacora(tmp_path) -> Bitacora:
 
 def como_json(datos: dict) -> str:
     return json.dumps(datos)
+
+
+# ---------------------------------------------------------------- solo en el repo full
+# Los tests marcados con @pytest.mark.solo_full necesitan el corpus real de la mesa, que no se
+# publica en el repo del curso (bot/scripts/publicar_lite.py). Sin él, se saltean con el motivo.
+CORPUS_MESA = Path(__file__).resolve().parents[1] / "corpus" / "mesa"
+
+
+def pytest_collection_modifyitems(config, items):
+    if CORPUS_MESA.is_dir():
+        return
+    saltear = pytest.mark.skip(reason="solo en el repo full: necesita el corpus real de la mesa, que no se publica")
+    for item in items:
+        if "solo_full" in item.keywords:
+            item.add_marker(saltear)
+
+
+@pytest.fixture(autouse=True)
+def auditoria_temporal(tmp_path, monkeypatch):
+    """PE7: cada test escribe su auditoría en una carpeta temporal, nunca en datos/seguridad/."""
+    monkeypatch.setenv("AUDITORIA_RUTA", str(tmp_path / "auditoria.jsonl"))
+    monkeypatch.setenv("AUDITORIA_SAL", "sal-de-los-tests")

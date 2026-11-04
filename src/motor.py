@@ -1,9 +1,10 @@
 """Motor LLM base: consulta -> modelo -> salida validada -> decisión de riesgo -> bitácora.
 
-Uso (desde la raíz del repo, con el entorno virtual activado):
+Uso (desde la carpeta bot/, con el entorno virtual activado):
     python -m src.motor                 # corre las 5 consultas de datos/consultas_demo.json
     python -m src.motor --simulado      # lo mismo, con un LLM falso (no necesita claves)
     python -m src.motor --demo-errores  # entrada inválida, reintento y error estructurado
+    python -m src.motor --senal-en-codigo  # la señal la calcula el código; el LLM confirma o veta (con el RAG)
 """
 
 from __future__ import annotations
@@ -23,8 +24,9 @@ from pydantic import BaseModel, ValidationError
 
 from .bitacora import Bitacora, CategoriaMotivo, Etapa, RegistroBitacora, kpi_tecnico
 from .broker import ErrorConfiguracion, modo_paper
-from .contratos import CampoFallido, Entrada, ErrorEstructurado, Salida
+from .contratos import Accion, CampoFallido, Entrada, ErrorEstructurado, Salida, TipoVeredicto, Veredicto
 from .prompts import PLANTILLA_CORRECCION, PROMPT_SISTEMA, VERSION_PROMPT, armar_mensaje_usuario
+from .prompts_veto import PLANTILLA_VETO, PROMPT_SISTEMA_VETO, VERSION_PROMPT_VETO
 from .proveedores import (
     ErrorProveedor,
     ProveedorAnthropic,
@@ -34,12 +36,14 @@ from .proveedores import (
     ProveedorSimulado,
     esquema_para_llm,
 )
-from .riesgo import DecisionRiesgo, ReglasRiesgo, ResultadoRiesgo, evaluar
+from .riesgo import Blackouts, DecisionRiesgo, EstadoDia, ReglasRiesgo, ResultadoRiesgo, evaluar
+from .senal import ParametrosEstrategia, calcular_senal
 
 log = logging.getLogger("motor")
 
-RAIZ = Path(__file__).resolve().parent.parent  # raíz del repo
+RAIZ = Path(__file__).resolve().parent.parent  # carpeta bot/
 ESQUEMA_SALIDA = esquema_para_llm(Salida)
+ESQUEMA_VETO = esquema_para_llm(Veredicto)
 
 # Qué pasa al final con la propuesta, según lo que decidió el código de riesgo.
 DECISION_FINAL = {
@@ -63,6 +67,10 @@ class ResultadoMotor(BaseModel):
     tokens_salida: int = 0
     costo_usd: float = 0.0
     latencia_ms: int = 0
+    # Solo en procesar_con_senal (la señal la calcula el código y el LLM confirma o veta):
+    veredicto: Veredicto | None = None
+    decision_final: str | None = None
+    codigo_final: str | None = None
 
 
 def campos_fallidos(error: ValidationError) -> list[CampoFallido]:
@@ -85,6 +93,9 @@ class Motor:
         reglas: ReglasRiesgo | None = None,
         presupuesto_tokens: int = 12_000,
         max_reintentos: int = 1,
+        estrategia: ParametrosEstrategia | None = None,
+        veto_obligatorio: bool = True,
+        timeout_veto_s: float = 20.0,
     ):
         if not proveedores:
             raise ValueError("Hace falta al menos un proveedor")
@@ -93,8 +104,14 @@ class Motor:
         self.reglas = reglas or ReglasRiesgo()
         self.presupuesto_tokens = presupuesto_tokens
         self.max_reintentos = max_reintentos
+        self.estrategia = estrategia or ParametrosEstrategia()
+        # Si el LLM no responde: True (desde el 02/11, pedido de la mesa) = la señal se descarta y
+        # se registra (falla cerrada); False = sigue sin veto, como en la PE2.
+        self.veto_obligatorio = veto_obligatorio
+        self.timeout_veto_s = timeout_veto_s  # pedido de la mesa (02/11): 20 s y falla cerrada
 
-    def _registrar(self, id_propuesta: str, etapa: Etapa, decision: str, autor: str, **extra) -> None:
+    def _registrar(self, id_propuesta: str, etapa: Etapa, decision: str, autor: str,
+                   version_prompt: str = VERSION_PROMPT, **extra) -> None:
         self.bitacora.registrar(
             RegistroBitacora(
                 id_propuesta=id_propuesta,
@@ -102,17 +119,17 @@ class Motor:
                 decision=decision,
                 autor=autor,
                 version_reglas=self.reglas.version,
-                version_prompt=VERSION_PROMPT,
+                version_prompt=version_prompt,
                 **extra,
             )
         )
 
-    async def _llamar(self, mensajes: list[dict]):
+    async def _llamar(self, mensajes: list[dict], sistema: str = PROMPT_SISTEMA, esquema: dict = ESQUEMA_SALIDA):
         """Prueba los proveedores en orden. Si uno falla por la API, pasa al siguiente."""
         ultimo_error: ErrorProveedor | None = None
         for proveedor in self.proveedores:
             try:
-                return await proveedor.generar(PROMPT_SISTEMA, mensajes, ESQUEMA_SALIDA)
+                return await proveedor.generar(sistema, mensajes, esquema)
             except ErrorProveedor as e:
                 log.warning("Falló %s (%s): %s", e.proveedor, e.tipo, e.mensaje)
                 ultimo_error = e
@@ -157,6 +174,11 @@ class Motor:
 
             try:
                 salida = Salida.model_validate_json(respuesta.texto)
+                if salida.accion == Accion.NO_OPERAR and salida.confianza != 0:
+                    # Sin señal no hay nada de qué estar seguro: el modelo ponía 0,95 o 0,0 según la
+                    # consulta (PE6). El código la fija en 0 para que el campo signifique una sola cosa.
+                    log.info("no_operar con confianza %.2f del modelo: se registra 0", salida.confianza)
+                    salida = salida.model_copy(update={"confianza": 0.0})
                 error = None
                 break
             except ValidationError as e:
@@ -218,6 +240,128 @@ class Motor:
 
         resultado.ok, resultado.salida, resultado.riesgo = True, salida, riesgo
         return resultado
+
+    async def procesar_con_senal(self, datos: dict, contexto=None, estado: EstadoDia | None = None,
+                                 blackouts: Blackouts | None = None, ejecutor=None) -> ResultadoMotor:
+        """La señal la calcula el código; el LLM solo confirma o veta (lección de la PE2).
+
+        `contexto(entrada, salida)` es opcional y devuelve fragmentos del RAG (mandato y manuales)
+        para que el veto tenga fundamento. Etapas de la bitácora: propuesta (autor codigo-senal),
+        decision_riesgo (codigo-riesgo) y decision_final (motor, llm-veto o broker).
+
+        Operando en vivo (src/operador.py) se pasan además:
+        - `estado` y `blackouts`: las reglas del día de reglas-v0.3;
+        - `ejecutor(entrada, salida)`: async, manda la orden y devuelve
+          (decision, categoria, codigo, detalle) para la decisión final.
+        El veto (búsqueda en el RAG + LLM) tiene `timeout_veto_s` en total; si no
+        responde a tiempo y el veto es obligatorio, la señal se descarta (falla cerrada).
+        """
+        inicio = time.perf_counter()
+        id_propuesta = str(datos.get("id_propuesta", "SIN-ID"))
+        version = f"{self.estrategia.version}+{VERSION_PROMPT_VETO}"
+        try:
+            entrada = Entrada.model_validate(datos)
+        except ValidationError as e:
+            error = ErrorEstructurado(tipo="entrada_invalida", mensaje="La consulta no cumple el contrato",
+                                      campos=campos_fallidos(e))
+            self._registrar(id_propuesta, Etapa.ERROR, "entrada_invalida", "motor", version_prompt=version,
+                            categoria_motivo=CategoriaMotivo.OPERATIVO, codigo_motivo="ENTRADA_INVALIDA",
+                            detalle=error.model_dump_json())
+            return ResultadoMotor(ok=False, id_propuesta=id_propuesta, error=error)
+
+        # 1. El código calcula la operación: sin tokens, siempre igual.
+        senal = calcular_senal(entrada, self.estrategia)
+        salida = senal.salida
+        resultado = ResultadoMotor(ok=True, id_propuesta=id_propuesta, salida=salida)
+
+        # 2. El código de riesgo la evalúa (con el estado del día, si opera en vivo).
+        riesgo = evaluar(entrada, salida, self.reglas, estado, blackouts)
+        resultado.riesgo = riesgo
+        veredicto: Veredicto | None = None
+        nota_veto, codigo_falla = "", "VETO_NO_DISPONIBLE"
+
+        # 3. Solo si hay una operación que el riesgo no rechazó, se gasta una llamada al LLM.
+        if riesgo.decision in (DecisionRiesgo.APROBADA_AUTO, DecisionRiesgo.REQUIERE_APROBACION):
+            try:
+                veredicto, nota_veto = await asyncio.wait_for(
+                    self._veto(entrada, salida, senal.regla, riesgo, contexto, resultado), self.timeout_veto_s)
+            except asyncio.TimeoutError:
+                veredicto = None
+                nota_veto = f"Veto sin respuesta en {self.timeout_veto_s:g} s"
+                codigo_falla = "VETO_TIMEOUT"
+        resultado.veredicto = veredicto
+        resultado.costo_usd = round(resultado.costo_usd, 6)
+        resultado.latencia_ms = round((time.perf_counter() - inicio) * 1000)
+
+        self._registrar(id_propuesta, Etapa.PROPUESTA, salida.accion.value, "codigo-senal", version_prompt=version,
+                        detalle=salida.model_dump_json(), proveedor=resultado.proveedor, modelo=resultado.modelo,
+                        intentos=resultado.intentos, tokens_entrada=resultado.tokens_entrada,
+                        tokens_salida=resultado.tokens_salida, costo_usd=resultado.costo_usd,
+                        latencia_ms=resultado.latencia_ms)
+        categoria = CategoriaMotivo.RIESGO if riesgo.decision == DecisionRiesgo.RECHAZADA else CategoriaMotivo.NINGUNO
+        self._registrar(id_propuesta, Etapa.DECISION_RIESGO, riesgo.decision.value, "codigo-riesgo",
+                        version_prompt=version, categoria_motivo=categoria, codigo_motivo=riesgo.codigo_motivo,
+                        detalle=riesgo.detalle)
+
+        # 4. Decisión final.
+        if veredicto and veredicto.veredicto == TipoVeredicto.VETAR:
+            # Un veto con motivo es una decisión, no una falla: cuenta como riesgo en el KPI de negocio.
+            final, cat, codigo, autor = "vetada", CategoriaMotivo.RIESGO, "VETO_LLM", "llm-veto"
+            detalle = veredicto.model_dump_json()
+        elif nota_veto and self.veto_obligatorio:
+            final, cat, codigo, autor, detalle = "descartada", CategoriaMotivo.OPERATIVO, codigo_falla, "motor", nota_veto
+        elif riesgo.decision == DecisionRiesgo.APROBADA_AUTO and ejecutor is not None:
+            final, cat, codigo, detalle = await ejecutor(entrada, salida)
+            autor = "broker"
+        elif riesgo.decision in DECISION_FINAL:
+            final, cat = DECISION_FINAL[riesgo.decision]
+            codigo, autor = riesgo.codigo_motivo, "motor"
+            detalle = nota_veto or (veredicto.model_dump_json() if veredicto else "")
+        else:  # requiere_aprobacion confirmada: espera a una persona (M5), sin decisión final
+            final = None
+        if final:
+            self._registrar(id_propuesta, Etapa.DECISION_FINAL, final, autor, version_prompt=version,
+                            categoria_motivo=cat, codigo_motivo=codigo, detalle=detalle)
+        resultado.decision_final = final
+        resultado.codigo_final = codigo if final else None
+        return resultado
+
+    async def _veto(self, entrada: Entrada, salida: Salida, regla: str, riesgo: ResultadoRiesgo, contexto,
+                    resultado: ResultadoMotor) -> tuple[Veredicto | None, str]:
+        """Busca en el RAG y le pide el veredicto al LLM. Devuelve (veredicto, nota si no hubo)."""
+        # La búsqueda es sincrónica (embeddings + ChromaDB): va a un hilo para que cuente en el timeout.
+        fragmentos = await asyncio.to_thread(contexto, entrada, salida) if contexto else []
+        bloques = "\n".join(f'<fragmento id="{f.fragmento_id}" documento="{f.titulo}" seccion="{f.seccion}">\n'
+                            f'{f.texto}\n</fragmento>' for f in fragmentos) or "(no hay fragmentos)"
+        mensajes = [{"role": "user", "content": PLANTILLA_VETO.format(
+            activo=entrada.activo, temporalidad=entrada.temporalidad.value,
+            hora_vela=entrada.hora_vela.isoformat(), accion=salida.accion.value, entrada=salida.precio_entrada,
+            stop=salida.stop_loss, objetivo=salida.take_profit, regla=regla,
+            decision_riesgo=riesgo.decision.value, detalle_riesgo=riesgo.detalle,
+            fragmentos=bloques, consulta=entrada.consulta)}]
+        nota = ""
+        for intento in range(1, self.max_reintentos + 2):
+            resultado.intentos = intento
+            try:
+                respuesta = await self._llamar(mensajes, PROMPT_SISTEMA_VETO, ESQUEMA_VETO)
+            except ErrorProveedor as e:
+                return None, f"Veto no disponible ({e.proveedor}/{e.tipo})"
+            resultado.proveedor, resultado.modelo = respuesta.proveedor, respuesta.modelo
+            resultado.tokens_entrada += respuesta.tokens_entrada
+            resultado.tokens_salida += respuesta.tokens_salida
+            resultado.costo_usd += respuesta.costo_usd
+            try:
+                veredicto = Veredicto.model_validate_json(respuesta.texto)
+                validos = {f.fragmento_id for f in fragmentos}
+                veredicto.fuentes = [f for f in veredicto.fuentes if f in validos]  # solo citas reales
+                return veredicto, ""
+            except ValidationError as e:
+                nota = "Veto no disponible (salida inválida)"
+                if intento <= self.max_reintentos:
+                    errores = "\n".join(f"- {c.campo}: {c.mensaje}" for c in campos_fallidos(e))
+                    mensajes += [{"role": "assistant", "content": respuesta.texto},
+                                 {"role": "user", "content": PLANTILLA_CORRECCION.format(errores=errores)}]
+        return None, nota
 
 
 # ---------------------------------------------------------------------------
@@ -286,6 +430,78 @@ async def correr_demo(motor: Motor, consultas: list[dict]) -> list[ResultadoMoto
     return resultados
 
 
+# El veto tiene que leer el mandato vigente. Con la búsqueda libre sola, el mandato no aparecía en
+# ninguna de 5 señales de ejemplo (03/11; la PE6 midió Recall@3 de 6/10): sus fragmentos son claves de
+# JSON cortas y pierden contra los manuales en prosa. Por eso se busca aparte dentro del mandato y se
+# suma la búsqueda libre de siempre.
+# Qué documentos son «el mandato» depende del corpus: config/veto_mandato.json. Sin ese archivo (o con
+# otro corpus) el veto hace solo la búsqueda libre.
+RUTA_VETO_MANDATO = RAIZ / "config" / "veto_mandato.json"
+
+
+def documentos_mandato(ruta: Path = RUTA_VETO_MANDATO) -> tuple[str, ...]:
+    if not ruta.is_file():
+        return ()
+    return tuple(json.loads(ruta.read_text(encoding="utf-8")).get("documentos", []))
+
+
+DOCUMENTOS_MANDATO = documentos_mandato()
+K_VETO_MANDATO = 3
+K_VETO_LIBRE = 3
+
+
+def combinar_contexto_veto(del_mandato: list, libres: list) -> list:
+    """Primero los fragmentos del mandato, después los libres, sin repetir fragmentos."""
+    vistos, salida = set(), []
+    for r in [*del_mandato, *libres]:
+        if r.fragmento_id not in vistos:
+            vistos.add(r.fragmento_id)
+            salida.append(r)
+    return salida
+
+
+def contexto_desde_rag():
+    """Si hay índice del RAG, el veto recibe el mandato y los manuales (el bot lee como Lector)."""
+    try:
+        from .rag.busqueda import buscar, coleccion_por_defecto
+        from .rag.permisos import Rol, Usuario
+
+        coleccion = coleccion_por_defecto()
+    except Exception as e:  # sin índice: el veto corre sin fragmentos
+        log.warning("Sin índice del RAG (%s): el veto no tiene contexto. Corré python -m src.rag ingestar", e)
+        return None
+    if not DOCUMENTOS_MANDATO:
+        log.warning("Sin %s: el veto no busca aparte en el mandato, solo hace la búsqueda libre", RUTA_VETO_MANDATO.name)
+    # El veto lee como Lector (reparto de permisos de la mesa): el mandato sí, los exports del Operador no.
+    bot = Usuario(id="bot-mesa", rol=Rol.LECTOR)
+
+    def contexto(entrada: Entrada, salida: Salida):
+        consulta = (f"reglas de riesgo, límites y restricciones para {salida.accion.value} {entrada.activo} "
+                    f"intradía. {entrada.consulta}")
+        del_mandato = (buscar(consulta, bot, K_VETO_MANDATO, coleccion=coleccion, documentos=list(DOCUMENTOS_MANDATO))
+                       if DOCUMENTOS_MANDATO else [])
+        return combinar_contexto_veto(del_mandato, buscar(consulta, bot, K_VETO_LIBRE, coleccion=coleccion))
+
+    return contexto
+
+
+async def correr_con_senal(motor: Motor, consultas: list[dict]) -> list[ResultadoMotor]:
+    contexto = contexto_desde_rag()
+    resultados = []
+    print("\n| # | Consulta | Señal (código) | Riesgo (código) | Veredicto (LLM) | Final | Tokens | Costo USD | ms |")
+    print("|---|---|---|---|---|---|---|---|---|")
+    for i, c in enumerate(consultas, start=1):
+        r = await motor.procesar_con_senal(c, contexto)
+        resultados.append(r)
+        accion = r.salida.accion.value if r.salida else (r.error.tipo if r.error else "-")
+        print(f"| {i} | {c['consulta'][:40]} | {accion} | {r.riesgo.decision.value if r.riesgo else '-'} "
+              f"| {r.veredicto.veredicto.value if r.veredicto else '(no se llamó)'} | {r.decision_final or 'espera'} "
+              f"| {r.tokens_entrada}/{r.tokens_salida} | {r.costo_usd:.6f} | {r.latencia_ms} |")
+        if r.veredicto:
+            print(f"|   | ↳ {r.veredicto.motivo} Fuentes: {', '.join(r.veredicto.fuentes) or '—'} | | | | | | | |")
+    return resultados
+
+
 async def demo_errores(motor_real: Motor, consulta: dict) -> None:
     print("\n=== Error 1: entrada inválida (RSI fuera de rango e id mal formado). No se llama al modelo.")
     mala = {**consulta, "id_propuesta": "123", "indicadores": {**consulta["indicadores"], "rsi": 140}}
@@ -312,6 +528,8 @@ async def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Motor LLM base de la mesa (PE2)")
     parser.add_argument("--simulado", action="store_true", help="usa un LLM falso (no necesita claves)")
     parser.add_argument("--demo-errores", action="store_true", help="muestra los caminos de error")
+    parser.add_argument("--senal-en-codigo", action="store_true",
+                        help="la señal la calcula el código y el LLM solo confirma o veta, con el RAG como contexto")
     parser.add_argument("--consultas", default=str(RAIZ / "datos" / "consultas_demo.json"))
     args = parser.parse_args(argv)
 
@@ -346,6 +564,10 @@ async def main(argv: list[str] | None = None) -> int:
             print("--demo-errores necesita un proveedor real.", file=sys.stderr)
             return 1
         await demo_errores(motor, consultas[0])
+        return 0
+
+    if args.senal_en_codigo:
+        await correr_con_senal(motor, consultas)
         return 0
 
     desde = datetime.now(timezone.utc)

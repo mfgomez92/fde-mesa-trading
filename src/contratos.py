@@ -79,6 +79,12 @@ class Indicadores(BaseModel):
     ema_lenta: float = Field(gt=0, description="EMA de 21 períodos")
     rsi: float = Field(ge=0, le=100, description="RSI de 14 períodos")
     atr: float = Field(gt=0, description="ATR de 14 períodos, en USD")
+    # estrategia-v0.2 (opcionales: la PE2 no los mandaba)
+    ema_rapida_anterior: float | None = Field(default=None, gt=0, description="EMA 9 de la vela anterior")
+    ema_lenta_anterior: float | None = Field(default=None, gt=0, description="EMA 21 de la vela anterior")
+    vwap: float | None = Field(default=None, gt=0, description="VWAP del día hasta esta vela")
+    cierre_diario_anterior: float | None = Field(default=None, gt=0, description="Cierre de la rueda anterior")
+    sma_diaria: float | None = Field(default=None, gt=0, description="SMA 50 diaria hasta la rueda anterior")
 
 
 class Entrada(BaseModel):
@@ -157,3 +163,22 @@ class ErrorEstructurado(BaseModel):
     tipo: str  # entrada_invalida | salida_invalida | error_api | presupuesto_agotado
     mensaje: str
     campos: list[CampoFallido] = Field(default_factory=list)
+
+
+class TipoVeredicto(str, Enum):
+    CONFIRMAR = "confirmar"
+    VETAR = "vetar"
+
+
+class Veredicto(BaseModel):
+    """Lo que devuelve el LLM cuando la señal la calcula el código (src/senal.py).
+
+    El modelo no puede cambiar la acción ni los precios: solo confirmar o vetar.
+    Un veto sin motivo no vale (en la PE1, el agente en contra vetaba sin registro).
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    veredicto: TipoVeredicto
+    motivo: str = Field(min_length=20, max_length=600)
+    fuentes: list[str] = Field(default_factory=list, description="ids de fragmentos del mandato o los manuales")
